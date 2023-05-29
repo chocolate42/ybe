@@ -215,16 +215,14 @@ int main(int argc, char *argv[]){
 		return 0;
 	}
 
-	if(argc==2){//ybe src || unybe src
+	if(argc<4){
 		in=argv[1];
 		enc=str_ends_with(argv[0], "unybe")?0:enc;
+	}
+	if(argc==2)//ybe src || unybe src
 		out=gen_outpath(argv[(argc==4)?2:1], (enc*8)-4);
-	}
-	else if(argc==3){//ybe src dest || unybe src dest
-		in=argv[1];
-		enc=str_ends_with(argv[0], "unybe")?0:enc;
+	else if(argc==3)//ybe src dest || unybe src dest
 		out=argv[2];
-	}
 	else if(argc==4){//ybe e src dest || ybe d src dest
 		in=argv[2];
 		out=argv[3];
