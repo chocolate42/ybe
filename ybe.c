@@ -47,9 +47,10 @@ void ybe2bin(char *infile, char* outfile){
 	_if(0!=memcmp(ybe, tmp, 4), "magic mismatch");
 	_if(4!=fread(tmp, 1, 4, fin), "fread sector count failed");
 	sector_cnt=get32lsb(tmp);
+	_if(!sector_cnt, "sector count cannot be zero");
 	_if(1!=fread(&crunch, 1, 1, fin), "fread encode type failed");
 
-	enc=malloc(sector_cnt*292);
+	_if(!(enc=malloc(sector_cnt*292)), "malloc failed");
 	switch(crunch){//read encoding
 		case 0://raw
 			for(i=0;i<sector_cnt;++i){
@@ -84,11 +85,15 @@ void ybe2bin(char *infile, char* outfile){
 		_if(yb_type_to_data_len(enc[i*292])!=fread(data, 1, yb_type_to_data_len(enc[i*292]), fin), "fread sector data failed");
 		g.enc=enc+(i*292);
 		decode_sector(&g);
-		_if(2352!=fwrite(sector, 1, 2352, fout), "Failed to write sector");
+		_if(2352!=fwrite(sector, 1, 2352, fout), "fwrite sector failed");
 	}
 
-	fclose(fin);
-	fclose(fout);
+	if(strcmp(infile, "-")!=0)
+		fclose(fin);
+	if(strcmp(outfile, "-")!=0)
+		fclose(fout);
+	if(enc)
+		free(enc);
 }
 
 void bin2ybe(char *infile, char* outfile){
@@ -106,11 +111,11 @@ void bin2ybe(char *infile, char* outfile){
 	yb_globals_init(&g);
 	while(1){
 		if(sector_alloc==sector_cnt){
-			enc=realloc(enc, (sector_cnt+1024)*292);
-			sector=realloc(sector, (sector_cnt+1024)*2352);
+			_if(!(enc=realloc(enc, (sector_cnt+1024)*292)), "realloc failed");
+			_if(!(sector=realloc(sector, (sector_cnt+1024)*2352)), "realloc failed");
 			sector_alloc+=1024;
 		}
-		if(0==(fread_res=fread(sector+(sector_cnt*2352), 1, 2352, fin))){
+		if(!(fread_res=fread(sector+(sector_cnt*2352), 1, 2352, fin))){
 			if(feof(fin))
 				break;
 			_("read nothing but not eof");
@@ -151,11 +156,11 @@ void bin2ybe(char *infile, char* outfile){
 		crunch=0;
 		_if(1!=fwrite(&crunch, 1, 1, fout), "fwrite encoding type failed");
 		for(i=0;i<sector_cnt;++i)
-			fwrite(enc+(i*292), 1, yb_type_to_enc_len(enc[i*292]), fout);
+			_if(yb_type_to_enc_len(enc[i*292])!=fwrite(enc+(i*292), 1, yb_type_to_enc_len(enc[i*292]), fout), "fwrite encoding failed");
 	}
 
 	for(i=0;i<sector_cnt;++i)
-		fwrite(sector+(i*2352)+yb_type_to_data_loc(enc[i*292]), 1, yb_type_to_data_len(enc[i*292]), fout);
+		_if(yb_type_to_data_len(enc[i*292])!=fwrite(sector+(i*2352)+yb_type_to_data_loc(enc[i*292]), 1, yb_type_to_data_len(enc[i*292]), fout), "fwrite data failed");
 
 	stats_encode(&g);
 	if(strcmp(outfile, "-")!=0)
@@ -168,7 +173,7 @@ void bin2ybe(char *infile, char* outfile){
 
 char *gen_outpath(char *inpath, int trunc){
 	char *outpath;
-	outpath=malloc(strlen(inpath)+5);
+	_if(!(outpath=malloc(strlen(inpath)+5)), "malloc failed");
 	sprintf(outpath, "%s.ybe", inpath);
 	outpath[strlen(inpath)+trunc]=0;
 	return outpath;
@@ -178,9 +183,20 @@ _Bool str_ends_with(char *str, char *end){
 	return (strlen(str)>=strlen(end)) && (strcmp(str+strlen(str)-strlen(end), end)==0);
 }
 
+void help(){
+	fprintf(stderr,  "ybe v0.1.1\n\nEncode:\n ybe src.bin\n ybe src.bin dest.ybe\n ybe e src.bin dest.ybe\n\n"
+		"Decode:\n unybe src.ybe\n unybe src.ybe dest.bin\n ybe d src.ybe dest.bin\n\n"
+		"- can take the place of src/dest to pipe with stdin/stdout\n\n");
+}
+
 int main(int argc, char *argv[]){
 	char *in, *out=NULL;
 	int enc=1;
+
+	if(argc==1 || (argc>=2 && ((strcmp(argv[1], "-h")==0)||(strcmp(argv[1], "--help")==0)))){
+		help();
+		return 0;
+	}
 
 	if(argc==2){//ybe src || unybe src
 		in=argv[1];
@@ -199,11 +215,15 @@ int main(int argc, char *argv[]){
 			enc=0;
 		else if(strcmp(argv[1], "e")==0)
 			enc=1;
-		else
+		else{
+			help();
 			_("Unknown mode");
+		}
 	}
-	else
+	else{
+		help();
 		_("Too many args");
+	}
 
 	eccedc_init();
 	fprintf(stderr, "%scode '%s' to '%s'\n", enc?"En":"De", in, out);
