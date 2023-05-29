@@ -19,7 +19,7 @@ static inline void ecc_writesectorq(const uint8_t *address, const uint8_t *data,
 }
 
 /*Blank sector for comparison*/
-static const uint8_t empty_sector[2352]={0};
+static const uint8_t zeroed_address[4]={0};
 /*Contents of predicted subheader data. For M1 this is the expected intermediate {0}*/
 static const uint8_t subheader[24]={
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -110,12 +110,12 @@ void decode_sector(yb *g){
 		if(head&YB_ECCP)
 			yb_loc+=memcpy_cnt(g->sector+2076, g->enc+yb_loc, 172);
 		else
-			ecc_writesectorp(empty_sector, g->sector+16, g->sector+2076);
+			ecc_writesectorp(zeroed_address, g->sector+16, g->sector+2076);
 
 		if(head&YB_ECCQ)
 			yb_loc+=memcpy_cnt(g->sector+2248, g->enc+yb_loc, 104);
 		else
-			ecc_writesectorq(empty_sector, g->sector+16, g->sector+2076);
+			ecc_writesectorq(zeroed_address, g->sector+16, g->sector+2076);
 	}
 	else{//YB_TYPE_M2F2
 		g->data_cnt=memcpy_cnt(g->sector+24, g->data, 2324);
@@ -203,10 +203,10 @@ size_t encode_sector(yb *g){
 				if(edc_compute(0, sec+16, 2056) != get32lsb(sec + 2072))
 					ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2072, 4);
 
-				if(!ecc_checksectorp(empty_sector, sec+16, sec+2076))
+				if(!ecc_checksectorp(zeroed_address, sec+16, sec+2076))
 					ecpy(&type, YB_ECCP, &g->cnt_deccp, enc, &enc_loc, sec+2076, 172);
 
-				if(!ecc_checksectorq(empty_sector, sec+16, sec+2076))
+				if(!ecc_checksectorq(zeroed_address, sec+16, sec+2076))
 					ecpy(&type, YB_ECCQ, &g->cnt_deccq, enc, &enc_loc, sec+2248, 104);
 			}
 		}
@@ -246,20 +246,15 @@ int yb_type_to_data_loc(uint8_t type){
 }
 
 /* Determine length of yb_enc from the type byte */
-static const uint16_t yb_enc_cnt[256]={
+static const uint16_t yb_enc_cnt[128]={
 	1,1,1,1,105,105,1,1,173,173,1,1,277,277,1,1,5,5,5,1,109,109,5,1,
 	177,177,5,1,281,281,5,1,9,5,5,1,113,109,5,1,181,177,5,1,285,281,5,1,
 	13,9,9,1,117,113,9,1,185,181,9,1,289,285,9,1,4,4,4,1,108,108,4,1,
 	176,176,4,1,280,280,4,1,8,8,8,1,112,112,8,1,180,180,8,1,284,284,8,1,
 	12,8,8,1,116,112,8,1,184,180,8,1,288,284,8,1,16,12,12,1,120,116,12,1,
-	188,184,12,1,292,288,12,1,1,1,1,1,105,105,1,1,173,173,1,1,277,277,1,1,
-	5,5,5,1,109,109,5,1,177,177,5,1,281,281,5,1,9,5,5,1,113,109,5,1,
-	181,177,5,1,285,281,5,1,13,9,9,1,117,113,9,1,185,181,9,1,289,285,9,1,
-	4,4,4,1,108,108,4,1,176,176,4,1,280,280,4,1,8,8,8,1,112,112,8,1,
-	180,180,8,1,284,284,8,1,12,8,8,1,116,112,8,1,184,180,8,1,288,284,8,1,
-	16,12,12,1,120,116,12,1,188,184,12,1,292,288,12,1
+	188,184,12,1,292,288,12,1
 };
 
 int yb_type_to_enc_len(uint8_t type){
-	return yb_enc_cnt[type];
+	return yb_enc_cnt[type&127];
 }
