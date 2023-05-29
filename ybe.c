@@ -56,10 +56,7 @@ void ybe2bin(char *infile, char* outfile){
 	uint32_t i, sector_cnt;
 	yb g={0};
 
-	if(strcmp(infile, "-")==0)
-		fin=stdin;
-	else
-		_if(!(fin=fopen(infile, "rb")), "fopen ybe input failed");
+	_if(!(fin=(strcmp(infile, "-")==0)?stdin:fopen(infile, "rb")), "Input stream cannot be NULL");
 	_if(4!=fread(tmp, 1, 4, fin), "fread magic failed");
 	_if((tmp[0]!='Y')||(tmp[1]!='B')||(tmp[2]!='E')||(tmp[3]!=0), "magic mismatch");
 	_if(4!=fread(tmp, 1, 4, fin), "fread sector count failed");
@@ -89,11 +86,7 @@ void ybe2bin(char *infile, char* outfile){
 		default:
 			_("Unknown encode type, invalid input or program outdated");
 	}
-
-	if(strcmp(outfile, "-")==0)
-		fout=stdout;
-	else
-		_if(!(fout=fopen(outfile, "wb")), "fopen bin output failed");
+	_if(!(fout=(strcmp(outfile, "-")==0)?stdout:fopen(outfile, "wb")), "Output stream cannot be NULL");
 	g.sector_address=150;
 	g.data=data;
 	g.sector=sector;
@@ -105,10 +98,8 @@ void ybe2bin(char *infile, char* outfile){
 		_if(2352!=fwrite(sector, 1, 2352, fout), "fwrite sector failed");
 	}
 
-	if(strcmp(infile, "-")!=0)
-		fclose(fin);
-	if(strcmp(outfile, "-")!=0)
-		fclose(fout);
+	_if((0!=strcmp(infile,"-"))&&(0!=fclose(fin)), "fclose input failed");
+	_if((0!=strcmp(outfile,"-"))&&(0!=fclose(fout)), "fclose output failed");
 	if(enc)
 		free(enc);
 }
@@ -120,11 +111,7 @@ void bin2ybe(char *infile, char* outfile){
 	uint8_t crunch=1, encoding_written=0, *enc=NULL, *sector=NULL, tmp[4];
 	yb g={0};
 
-	if(strcmp(infile, "-")==0)
-		fin=stdin;
-	else
-		_if(!(fin=fopen(infile, "rb")), "fopen bin input failed");
-
+	_if(!(fin=(strcmp(infile, "-")==0)?stdin:fopen(infile, "rb")), "Input stream cannot be NULL");
 	g.sector_address=150;
 	while(1){
 		if(sector_alloc==sector_cnt){
@@ -145,13 +132,9 @@ void bin2ybe(char *infile, char* outfile){
 
 		++sector_cnt;
 	}
-	if(strcmp(infile, "-")!=0)
-		fclose(fin);
+	_if((0!=strcmp(infile,"-"))&&(0!=fclose(fin)), "fclose input failed");
 
-	if(strcmp(outfile, "-")==0)
-		fout=stdout;
-	else
-		_if(!(fout=fopen(outfile, "wb")), "fopen ybe output failed");
+	_if(!(fout=(strcmp(outfile, "-")==0)?stdout:fopen(outfile, "wb")), "Output stream cannot be NULL");
 	_if(4!=fwrite(ybe, 1, 4, fout), "fwrite magic failed");
 	put32lsb(tmp, sector_cnt);
 	_if(4!=fwrite(tmp, 1, 4, fout), "fwrite sector count failed");
@@ -180,8 +163,7 @@ void bin2ybe(char *infile, char* outfile){
 		_if(yb_type_to_data_len(enc[i*292])!=fwrite(sector+(i*2352)+yb_type_to_data_loc(enc[i*292]), 1, yb_type_to_data_len(enc[i*292]), fout), "fwrite data failed");
 
 	stats_encode(&g);
-	if(strcmp(outfile, "-")!=0)
-		fclose(fout);
+	_if((0!=strcmp(outfile,"-"))&&(0!=fclose(fout)), "fclose output failed");
 	if(enc)
 		free(enc);
 	if(sector)
