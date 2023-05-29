@@ -209,6 +209,7 @@ void help(){
 int main(int argc, char *argv[]){
 	char *in, *out=NULL;
 	int enc=1;
+	void (*func[])(char*, char*)={ybe2bin, bin2ybe};
 
 	if(argc==1 || (argc>=2 && ((strcmp(argv[1], "-h")==0)||(strcmp(argv[1], "--help")==0)))){
 		help();
@@ -228,9 +229,7 @@ int main(int argc, char *argv[]){
 		out=argv[3];
 		if(strcmp(argv[1], "d")==0)
 			enc=0;
-		else if(strcmp(argv[1], "e")==0)
-			enc=1;
-		else{
+		else if(strcmp(argv[1], "e")!=0){
 			help();
 			_("Unknown mode");
 		}
@@ -242,10 +241,7 @@ int main(int argc, char *argv[]){
 
 	eccedc_init();
 	fprintf(stderr, "%scode '%s' to '%s'\n", enc?"En":"De", in, out);
-	if(enc)
-		bin2ybe(in, out);
-	else
-		ybe2bin(in, out);
+	func[enc](in, out);
 	if(argc==2)
 		free(out);
 
