@@ -1,5 +1,22 @@
 #include "yb.h"
+#ifdef YB_MIN
+static void memcpy(uint8_t *dest, const uint8_t *src, size_t n){
+	size_t i;
+	for(i=0;i<n;++i)
+		dest[i]=src[i];
+}
+static int memcmp(const uint8_t *s1, const uint8_t *s2, size_t n){
+	size_t i;
+	for(i=0;i<n;++i){
+		if(s1[i]!=s2[i])
+			return 1;
+	}
+	return 0;
+}
+#else
 #include <string.h>
+#endif
+
 
 /* ECC generation taken from ECM */
 #include "ecm_code.c"
@@ -26,11 +43,6 @@ static const uint8_t subheader[24]={
 	0, 0, 8, 0, 0, 0, 8, 0,
 	0, 0, 0x64, 1, 0, 0, 0x64, 1};
 static const uint8_t sync[12]={0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0};
-
-void yb_globals_init(yb *g){
-	memset(g, 0, sizeof(yb));
-	g->sector_address=150;
-}
 
 static inline void int_to_bcd(int *i, unsigned char *b){
 	*b = ((*i/10)<<4) + *i%10;

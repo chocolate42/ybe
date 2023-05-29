@@ -3,7 +3,25 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#ifdef YB_MIN
+int strcmp(const char *s1, const char *s2){
+	size_t n;
+	for(n=0;;++n){
+		if(s1[n]!=s2[n])
+			return 1;
+		if(!s1[n])
+			return 0;
+	}
+}
+size_t strlen(const char *s){
+	size_t n;
+	for(n=0;s[n];++n);
+	return n;
+}
+#else
 #include <string.h>
+#endif
 
 static inline void _(char *s){
 	fprintf(stderr, "Error: %s\n", s);
@@ -33,18 +51,17 @@ void stats_encode(yb *g){
 }
 
 void ybe2bin(char *infile, char* outfile){
-	char* ybe="YBE";
 	FILE *fin=NULL, *fout=NULL;
 	uint8_t crunch, data[2352], *enc=NULL, sector[2352], tmp[4];
 	uint32_t i, sector_cnt;
-	yb g;
+	yb g={0};
 
 	if(strcmp(infile, "-")==0)
 		fin=stdin;
 	else
 		_if(!(fin=fopen(infile, "rb")), "fopen ybe input failed");
 	_if(4!=fread(tmp, 1, 4, fin), "fread magic failed");
-	_if(0!=memcmp(ybe, tmp, 4), "magic mismatch");
+	_if((tmp[0]!='Y')||(tmp[1]!='B')||(tmp[2]!='E')||(tmp[3]!=0), "magic mismatch");
 	_if(4!=fread(tmp, 1, 4, fin), "fread sector count failed");
 	sector_cnt=get32lsb(tmp);
 	_if(!sector_cnt, "sector count cannot be zero");
@@ -77,7 +94,7 @@ void ybe2bin(char *infile, char* outfile){
 		fout=stdout;
 	else
 		_if(!(fout=fopen(outfile, "wb")), "fopen bin output failed");
-	yb_globals_init(&g);
+	g.sector_address=150;
 	g.data=data;
 	g.sector=sector;
 
@@ -101,14 +118,14 @@ void bin2ybe(char *infile, char* outfile){
 	FILE *fin, *fout;
 	size_t sector_alloc=0, sector_cnt=0, enc_size_tot=0, i, fread_res;
 	uint8_t crunch=1, encoding_written=0, *enc=NULL, *sector=NULL, tmp[4];
-	yb g;
+	yb g={0};
 
 	if(strcmp(infile, "-")==0)
 		fin=stdin;
 	else
 		_if(!(fin=fopen(infile, "rb")), "fopen bin input failed");
 
-	yb_globals_init(&g);
+	g.sector_address=150;
 	while(1){
 		if(sector_alloc==sector_cnt){
 			_if(!(enc=realloc(enc, (sector_cnt+1024)*292)), "realloc failed");
@@ -139,7 +156,7 @@ void bin2ybe(char *infile, char* outfile){
 	put32lsb(tmp, sector_cnt);
 	_if(4!=fwrite(tmp, 1, 4, fout), "fwrite sector count failed");
 
-	if(crunch && !encoding_written && (g.cnt_conformant==g.cnt_total)){//potential that input is perfect
+	if(crunch && !encoding_written && (g.cnt_conformant==g.cnt_total)){//"perfect" encode method
 		for(i=0;i<4;++i){
 			if(g.cnt_mode[i])
 				break;
@@ -152,7 +169,7 @@ void bin2ybe(char *infile, char* outfile){
 	}
 	if(crunch && !encoding_written){//try different encoding forms TODO
 	}
-	if(!encoding_written){//output raw encoding
+	if(!encoding_written){//"raw" encode method
 		crunch=0;
 		_if(1!=fwrite(&crunch, 1, 1, fout), "fwrite encoding type failed");
 		for(i=0;i<sector_cnt;++i)

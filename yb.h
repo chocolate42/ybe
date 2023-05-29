@@ -19,9 +19,6 @@ typedef struct{
 	uint32_t cnt_conformant, cnt_total;
 } yb;
 
-/* Init with standard track 1 defaults */
-void yb_globals_init(yb *g);
-
 /* encode/decode a sector with an appropriately prepared struct */
 void decode_sector(yb *g);
 size_t encode_sector(yb *g);
