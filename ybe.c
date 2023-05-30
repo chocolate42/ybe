@@ -1,4 +1,5 @@
 #include "yb.h"
+#include "ybe_common.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -23,16 +24,6 @@ size_t strlen(const char *s){
 #include <string.h>
 #endif
 
-static inline void _(char *s){
-	fprintf(stderr, "Error: %s\n", s);
-	exit(1);
-}
-
-static inline void _if(_Bool goodbye, char *s){
-	if(goodbye)
-		_(s);
-}
-
 void stats_encode(yb *g){
 	fprintf(stderr, "\nPrediction Stats:\n");
 	if(g->cnt_conformant)fprintf(stderr, "Fully Predicted Sectors    : %u / %u\n", g->cnt_conformant, g->cnt_total);
@@ -52,40 +43,14 @@ void stats_encode(yb *g){
 
 void ybe2bin(char *infile, char* outfile){
 	FILE *fin=NULL, *fout=NULL;
-	uint8_t crunch, data[2352], *enc=NULL, sector[2352], tmp[4];
+	uint8_t crunch, data[2352], *enc=NULL, sector[2352];
 	uint32_t i, sector_cnt;
 	yb g={0};
 
 	_if(!(fin=(strcmp(infile, "-")==0)?stdin:fopen(infile, "rb")), "Input stream cannot be NULL");
-	_if(4!=fread(tmp, 1, 4, fin), "fread magic failed");
-	_if((tmp[0]!='Y')||(tmp[1]!='B')||(tmp[2]!='E')||(tmp[3]!=0), "magic mismatch");
-	_if(4!=fread(tmp, 1, 4, fin), "fread sector count failed");
-	sector_cnt=get32lsb(tmp);
-	_if(!sector_cnt, "sector count cannot be zero");
-	_if(1!=fread(&crunch, 1, 1, fin), "fread encode type failed");
+	ybe_read_header(fin, &sector_cnt, &crunch);
+	enc=ybe_read_encoding(fin, sector_cnt, crunch);
 
-	_if(!(enc=malloc(sector_cnt*292)), "malloc failed");
-	switch(crunch){//read encoding
-		case 0://raw
-			for(i=0;i<sector_cnt;++i){
-				_if(1!=fread(enc+(i*292), 1, 1, fin), "fread sector type byte failed");
-				if(1!=yb_type_to_enc_len(enc[i*292]))
-					_if((yb_type_to_enc_len(enc[i*292])-1)!=fread(enc+(i*292)+1, 1, yb_type_to_enc_len(enc[i*292])-1, fin), "fread sector encoding failed");
-			}
-			break;
-
-		//perfectly modelled with a single sector type
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-			for(i=0;i<sector_cnt;++i)
-				enc[i*292]=crunch-1;
-			break;
-
-		default:
-			_("Unknown encode type, invalid input or program outdated");
-	}
 	_if(!(fout=(strcmp(outfile, "-")==0)?stdout:fopen(outfile, "wb")), "Output stream cannot be NULL");
 	g.sector_address=150;
 	g.data=data;
@@ -176,10 +141,6 @@ char *gen_outpath(char *inpath, int trunc){
 	sprintf(outpath, "%s.ybe", inpath);
 	outpath[strlen(inpath)+trunc]=0;
 	return outpath;
-}
-
-_Bool str_ends_with(char *str, char *end){
-	return (strlen(str)>=strlen(end)) && (strcmp(str+strlen(str)-strlen(end), end)==0);
 }
 
 void help(){
