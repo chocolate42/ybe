@@ -17,6 +17,8 @@ typedef struct{
 	uint32_t cnt_mode[4];
 	uint32_t cnt_dadd, cnt_deccp, cnt_deccq, cnt_dedc, cnt_dint, cnt_dsub;
 	uint32_t cnt_conformant, cnt_total;
+	//only used if YB_COUNT_ZERO is defined. This way is cleaner to implement
+	uint32_t cnt_zero_add, cnt_zero_sub, cnt_zero_edc, cnt_zero_eccp, cnt_zero_eccq;
 } yb;
 
 /* encode/decode a sector with an appropriately prepared struct */

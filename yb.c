@@ -35,8 +35,8 @@ static inline void ecc_writesectorq(const uint8_t *address, const uint8_t *data,
 	ecc_writepq(address, data, 52, 43, 86, 88, ecc + 0xAC);
 }
 
-/*Blank sector for comparison*/
-static const uint8_t zeroed_address[4]={0};
+/*Zeroes for comparison*/
+static const uint8_t zeroes[172]={0};
 /*Contents of predicted subheader data. For M1 this is the expected intermediate {0}*/
 static const uint8_t subheader[24]={
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -122,12 +122,12 @@ void decode_sector(yb *g){
 		if(head&YB_ECCP)
 			yb_loc+=memcpy_cnt(g->sector+2076, g->enc+yb_loc, 172);
 		else
-			ecc_writesectorp(zeroed_address, g->sector+16, g->sector+2076);
+			ecc_writesectorp(zeroes, g->sector+16, g->sector+2076);
 
 		if(head&YB_ECCQ)
 			yb_loc+=memcpy_cnt(g->sector+2248, g->enc+yb_loc, 104);
 		else
-			ecc_writesectorq(zeroed_address, g->sector+16, g->sector+2076);
+			ecc_writesectorq(zeroes, g->sector+16, g->sector+2076);
 	}
 	else{//YB_TYPE_M2F2
 		g->data_cnt=memcpy_cnt(g->sector+24, g->data, 2324);
@@ -144,7 +144,11 @@ void decode_sector(yb *g){
 }
 
 /*Copy section of a sector and update stats if it cannot be predicted*/
-static inline void ecpy(uint8_t *type, uint8_t mask, uint32_t *counter, uint8_t *enc, size_t *enc_loc, uint8_t *cpy, int len){
+static inline void ecpy(uint8_t *type, uint8_t mask, uint32_t *counter, uint8_t *enc, size_t *enc_loc, uint8_t *cpy, int len, uint32_t *zero_counter){
+#ifdef YB_COUNT_ZERO
+	if(memcmp(zeroes, cpy, len)==0)
+		(*zero_counter)++;
+#endif
 	(*counter)++;
 	(*type)|=mask;
 	memcpy(enc+(*enc_loc), cpy, len);
@@ -163,22 +167,22 @@ size_t encode_sector(yb *g){
 
 			sec_to_add(&g->sector_address, g->add_scratch);
 			if(memcmp(sec+12, g->add_scratch, 3)!=0)
-				ecpy(&type, YB_ADD, &g->cnt_dadd, enc, &enc_loc, sec+12, 3);
+				ecpy(&type, YB_ADD, &g->cnt_dadd, enc, &enc_loc, sec+12, 3, &g->cnt_zero_add);
 
 			g->data=sec+16;
 			g->data_cnt=2048;
 
 			if(edc_compute(0, sec, 2064)!=get32lsb(sec + 2064))
-				ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2064, 4);
+				ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2064, 4, &g->cnt_zero_edc);
 
 			if(memcmp(subheader, sec+2068, 8)!=0)
-				ecpy(&type, YB_SUB, &g->cnt_dint, enc, &enc_loc, sec+2068, 8);
+				ecpy(&type, YB_SUB, &g->cnt_dint, enc, &enc_loc, sec+2068, 8, &g->cnt_zero_sub);
 
 			if(!ecc_checksectorp(sec+12, sec+16, sec+2076))
-				ecpy(&type, YB_ECCP, &g->cnt_deccp, enc, &enc_loc, sec+2076, 172);
+				ecpy(&type, YB_ECCP, &g->cnt_deccp, enc, &enc_loc, sec+2076, 172, &g->cnt_zero_eccp);
 
 			if(!ecc_checksectorq(sec+12, sec+16, sec+2076))
-				ecpy(&type, YB_ECCQ, &g->cnt_deccq, enc, &enc_loc, sec+2248, 104);
+				ecpy(&type, YB_ECCQ, &g->cnt_deccq, enc, &enc_loc, sec+2248, 104, &g->cnt_zero_eccq);
 		}
 		else if(sec[15]==2 && memcmp(sec+16, sec+20, 4)==0){
 			if(sec[18]&32){/*M2F2*/
@@ -187,16 +191,16 @@ size_t encode_sector(yb *g){
 
 				sec_to_add(&g->sector_address, g->add_scratch);
 				if(memcmp(sec+12, g->add_scratch, 3)!=0)
-					ecpy(&type, YB_ADD, &g->cnt_dadd, enc, &enc_loc, sec+12, 3);
+					ecpy(&type, YB_ADD, &g->cnt_dadd, enc, &enc_loc, sec+12, 3, &g->cnt_zero_add);
 
 				if(memcmp(sec+16, subheader+16, 8)!=0)
-					ecpy(&type, YB_SUB, &g->cnt_dsub, enc, &enc_loc, sec+16, 4);
+					ecpy(&type, YB_SUB, &g->cnt_dsub, enc, &enc_loc, sec+16, 4, &g->cnt_zero_sub);
 
 				g->data=sec+24;
 				g->data_cnt=2324;
 
 				if(edc_compute(0, sec+16, 2332) != get32lsb(sec+2348))
-					ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2348, 4);
+					ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2348, 4, &g->cnt_zero_edc);
 			}
 			else{/*M2F1*/
 				++g->cnt_mode[YB_TYPE_M2F1];
@@ -204,22 +208,22 @@ size_t encode_sector(yb *g){
 
 				sec_to_add(&g->sector_address, g->add_scratch);
 				if(memcmp(sec+12, g->add_scratch, 3)!=0)
-					ecpy(&type, YB_ADD, &g->cnt_dadd, enc, &enc_loc, sec+12, 3);
+					ecpy(&type, YB_ADD, &g->cnt_dadd, enc, &enc_loc, sec+12, 3, &g->cnt_zero_add);
 
 				if(memcmp(sec+16, subheader+8, 8)!=0)
-					ecpy(&type, YB_SUB, &g->cnt_dsub, enc, &enc_loc, sec+16, 4);
+					ecpy(&type, YB_SUB, &g->cnt_dsub, enc, &enc_loc, sec+16, 4, &g->cnt_zero_sub);
 
 				g->data=sec+24;
 				g->data_cnt=2048;
 
 				if(edc_compute(0, sec+16, 2056) != get32lsb(sec + 2072))
-					ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2072, 4);
+					ecpy(&type, YB_EDC, &g->cnt_dedc, enc, &enc_loc, sec+2072, 4, &g->cnt_zero_edc);
 
-				if(!ecc_checksectorp(zeroed_address, sec+16, sec+2076))
-					ecpy(&type, YB_ECCP, &g->cnt_deccp, enc, &enc_loc, sec+2076, 172);
+				if(!ecc_checksectorp(zeroes, sec+16, sec+2076))
+					ecpy(&type, YB_ECCP, &g->cnt_deccp, enc, &enc_loc, sec+2076, 172, &g->cnt_zero_eccp);
 
-				if(!ecc_checksectorq(zeroed_address, sec+16, sec+2076))
-					ecpy(&type, YB_ECCQ, &g->cnt_deccq, enc, &enc_loc, sec+2248, 104);
+				if(!ecc_checksectorq(zeroes, sec+16, sec+2076))
+					ecpy(&type, YB_ECCQ, &g->cnt_deccq, enc, &enc_loc, sec+2248, 104, &g->cnt_zero_eccq);
 			}
 		}
 		else{/* Not M1/M2F1/M2F2, treat as raw */

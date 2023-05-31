@@ -26,19 +26,28 @@ size_t strlen(const char *s){
 
 void stats_encode(yb *g){
 	fprintf(stderr, "\nPrediction Stats:\n");
-	if(g->cnt_conformant)fprintf(stderr, "Fully Predicted Sectors    : %u / %u\n", g->cnt_conformant, g->cnt_total);
-	if(g->cnt_dadd)fprintf(stderr, "Unpredictable Addresses    : %u / %u\n", g->cnt_dadd, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
-	if(g->cnt_dint)fprintf(stderr, "Unpredictable Intermediates: %u / %u\n", g->cnt_dint, g->cnt_mode[YB_TYPE_M1]);
-	if(g->cnt_dsub)fprintf(stderr, "Unpredictable Subheaders   : %u / %u\n", g->cnt_dsub, (g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
-	if(g->cnt_dedc)fprintf(stderr, "Unpredictable EDC Count    : %u / %u\n", g->cnt_dedc, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
-	if(g->cnt_deccp)fprintf(stderr, "Unpredictable ECC P Fields : %u / %u\n", g->cnt_deccp, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
-	if(g->cnt_deccq)fprintf(stderr, "Unpredictable ECC Q Fields : %u / %u\n", g->cnt_deccq, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
+	if(g->cnt_conformant)fprintf(stderr, "Fully Predicted Sectors   : %6u / %6u\n", g->cnt_conformant, g->cnt_total);
+	if(g->cnt_dadd)fprintf(stderr, "Unpredictable Address     : %6u / %6u\n", g->cnt_dadd, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
+	if(g->cnt_dint)fprintf(stderr, "Unpredictable Intermediate: %6u / %6u\n", g->cnt_dint, g->cnt_mode[YB_TYPE_M1]);
+	if(g->cnt_dsub)fprintf(stderr, "Unpredictable Subheader   : %6u / %6u\n", g->cnt_dsub, (g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
+	if(g->cnt_dedc)fprintf(stderr, "Unpredictable EDC         : %6u / %6u\n", g->cnt_dedc, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
+	if(g->cnt_deccp)fprintf(stderr, "Unpredictable ECC P       : %6u / %6u\n", g->cnt_deccp, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
+	if(g->cnt_deccq)fprintf(stderr, "Unpredictable ECC Q       : %6u / %6u\n", g->cnt_deccq, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
+#ifdef YB_ZERO_COUNT
+	if(g->cnt_zero_add||g->cnt_zero_sub||g->cnt_zero_edc||g->cnt_zero_eccp||g->cnt_zero_eccq)
+		fprintf(stderr, "Zeroed field stats:\n");
+	if(g->cnt_zero_add)fprintf(stderr, "Zeroed Addresses: %6u / %6u\n", g->cnt_zero_add, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
+	if(g->cnt_zero_sub)fprintf(stderr, "Zeroed Subheaders: %6u / %6u\n", g->cnt_zero_sub, (g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
+	if(g->cnt_zero_edc)fprintf(stderr, "Zeroed EDC: %6u / %6u\n", g->cnt_zero_edc, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
+	if(g->cnt_zero_eccp)fprintf(stderr, "Zeroed ECC P: %6u / %6u\n", g->cnt_zero_eccp, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
+	if(g->cnt_zero_eccq)fprintf(stderr, "Zeroed ECC Q: %6u / %6u\n", g->cnt_zero_eccq, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
+#endif
 	fprintf(stderr, "\nMode Stats:\n");
-	if(g->cnt_mode[YB_TYPE_M1])fprintf(stderr, "Mode 1 Count        : %u / %u\n", g->cnt_mode[YB_TYPE_M1], g->cnt_total);
-	if(g->cnt_mode[YB_TYPE_M2F1])fprintf(stderr, "Mode 2 Form 1 Count : %u / %u\n", g->cnt_mode[YB_TYPE_M2F1], g->cnt_total);
-	if(g->cnt_mode[YB_TYPE_M2F2])fprintf(stderr, "Mode 2 Form 2 Count : %u / %u\n", g->cnt_mode[YB_TYPE_M2F2], g->cnt_total);
-	if(g->cnt_mode[YB_TYPE_RAW])fprintf(stderr, "Raw Sector Count  : %u / %u\n", g->cnt_mode[YB_TYPE_RAW], g->cnt_total);
-	fprintf(stderr, "\n");
+	if(g->cnt_mode[YB_TYPE_M1])fprintf(stderr, "Mode 1 Count        : %6u / %6u\n", g->cnt_mode[YB_TYPE_M1], g->cnt_total);
+	if(g->cnt_mode[YB_TYPE_M2F1])fprintf(stderr, "Mode 2 Form 1 Count : %6u / %6u\n", g->cnt_mode[YB_TYPE_M2F1], g->cnt_total);
+	if(g->cnt_mode[YB_TYPE_M2F2])fprintf(stderr, "Mode 2 Form 2 Count : %6u / %6u\n", g->cnt_mode[YB_TYPE_M2F2], g->cnt_total);
+	if(g->cnt_mode[YB_TYPE_RAW])fprintf(stderr, "Raw Sector Count  : %6u / %6u\n", g->cnt_mode[YB_TYPE_RAW], g->cnt_total);
+fprintf(stderr, "\n");
 }
 
 void ybe2bin(char *infile, char* outfile){
@@ -150,7 +159,7 @@ void help(){
 }
 
 int main(int argc, char *argv[]){
-	char *in, *out=NULL;
+	char *in=NULL, *out=NULL;
 	int enc=1;
 	void (*func[])(char*, char*)={ybe2bin, bin2ybe};
 
