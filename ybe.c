@@ -33,15 +33,13 @@ void stats_encode(yb *g){
 	if(g->cnt_dedc)fprintf(stderr, "Unpredictable EDC         : %6u / %6u\n", g->cnt_dedc, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
 	if(g->cnt_deccp)fprintf(stderr, "Unpredictable ECC P       : %6u / %6u\n", g->cnt_deccp, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
 	if(g->cnt_deccq)fprintf(stderr, "Unpredictable ECC Q       : %6u / %6u\n", g->cnt_deccq, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
-#ifdef YB_ZERO_COUNT
 	if(g->cnt_zero_add||g->cnt_zero_sub||g->cnt_zero_edc||g->cnt_zero_eccp||g->cnt_zero_eccq)
-		fprintf(stderr, "Zeroed field stats:\n");
+		fprintf(stderr, "\nZeroed field stats:\n");
 	if(g->cnt_zero_add)fprintf(stderr, "Zeroed Addresses: %6u / %6u\n", g->cnt_zero_add, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
 	if(g->cnt_zero_sub)fprintf(stderr, "Zeroed Subheaders: %6u / %6u\n", g->cnt_zero_sub, (g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
 	if(g->cnt_zero_edc)fprintf(stderr, "Zeroed EDC: %6u / %6u\n", g->cnt_zero_edc, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
 	if(g->cnt_zero_eccp)fprintf(stderr, "Zeroed ECC P: %6u / %6u\n", g->cnt_zero_eccp, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
 	if(g->cnt_zero_eccq)fprintf(stderr, "Zeroed ECC Q: %6u / %6u\n", g->cnt_zero_eccq, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]));
-#endif
 	fprintf(stderr, "\nMode Stats:\n");
 	if(g->cnt_mode[YB_TYPE_M1])fprintf(stderr, "Mode 1 Count        : %6u / %6u\n", g->cnt_mode[YB_TYPE_M1], g->cnt_total);
 	if(g->cnt_mode[YB_TYPE_M2F1])fprintf(stderr, "Mode 2 Form 1 Count : %6u / %6u\n", g->cnt_mode[YB_TYPE_M2F1], g->cnt_total);
@@ -80,7 +78,7 @@ void ybe2bin(char *infile, char* outfile){
 
 void bin2ybe(char *infile, char* outfile){
 	char *ybe="YBE";
-	FILE *fin, *fout;
+	FILE *fin, *fout=NULL;
 	size_t sector_alloc=0, sector_cnt=0, enc_size_tot=0, i, fread_res;
 	uint8_t crunch=1, encoding_written=0, *enc=NULL, *sector=NULL, tmp[4];
 	yb g={0};
@@ -108,10 +106,11 @@ void bin2ybe(char *infile, char* outfile){
 	}
 	_if((0!=strcmp(infile,"-"))&&(0!=fclose(fin)), "fclose input failed");
 
-	_if(!(fout=(strcmp(outfile, "-")==0)?stdout:fopen(outfile, "wb")), "Output stream cannot be NULL");
-	_if(4!=fwrite(ybe, 1, 4, fout), "fwrite magic failed");
+	if(outfile)
+		_if(!(fout=(strcmp(outfile, "-")==0)?stdout:fopen(outfile, "wb")), "Output stream cannot be NULL");
+	_if(fout&&(4!=fwrite(ybe, 1, 4, fout)), "fwrite magic failed");
 	put32lsb(tmp, sector_cnt);
-	_if(4!=fwrite(tmp, 1, 4, fout), "fwrite sector count failed");
+	_if(fout&&(4!=fwrite(tmp, 1, 4, fout)), "fwrite sector count failed");
 
 	if(crunch && !encoding_written && (g.cnt_conformant==g.cnt_total)){//"perfect" encode method
 		for(i=0;i<4;++i){
@@ -120,24 +119,33 @@ void bin2ybe(char *infile, char* outfile){
 		}
 		if(g.cnt_mode[i]==g.cnt_total){//input is perfect
 			crunch=i+1;
-			_if(1!=fwrite(&crunch, 1, 1, fout), "fwrite encoding failed");
+			_if(fout&&(1!=fwrite(&crunch, 1, 1, fout)), "fwrite encoding failed");
 			encoding_written=1;
 		}
 	}
-	if(crunch && !encoding_written){//try different encoding forms TODO
+	if(crunch && !encoding_written){//"zerosuck" encode method
+		// * Mastering errors often involve zeroed fields particularly earlier examples like
+		//   early CD consoles
+		// * The type byte of raw encoding has one bit unset always with possibly more bits
+		//  available depending on how many fields are perfectly modelled in a given file.
+		//  Address is often perfectly modelled, sub is often perfectly modelled unless
+		//  M2F2 sectors are present
+		//   intermediate in M1 is always either perfectly modelled or non-zero
+		// * This encode method makes use of unused bits in the type byte to flag when an unmodellable field is
+		//   zeroed, instead of writing those zeroed bytes
 	}
 	if(!encoding_written){//"raw" encode method
 		crunch=0;
-		_if(1!=fwrite(&crunch, 1, 1, fout), "fwrite encoding type failed");
+		_if(fout&&(1!=fwrite(&crunch, 1, 1, fout)), "fwrite encoding type failed");
 		for(i=0;i<sector_cnt;++i)
-			_if(yb_type_to_enc_len(enc[i*292])!=fwrite(enc+(i*292), 1, yb_type_to_enc_len(enc[i*292]), fout), "fwrite encoding failed");
+			_if(fout&&(yb_type_to_enc_len(enc[i*292])!=fwrite(enc+(i*292), 1, yb_type_to_enc_len(enc[i*292]), fout)), "fwrite encoding failed");
 	}
 
 	for(i=0;i<sector_cnt;++i)
-		_if(yb_type_to_data_len(enc[i*292])!=fwrite(sector+(i*2352)+yb_type_to_data_loc(enc[i*292]), 1, yb_type_to_data_len(enc[i*292]), fout), "fwrite data failed");
+		_if(fout&&(yb_type_to_data_len(enc[i*292])!=fwrite(sector+(i*2352)+yb_type_to_data_loc(enc[i*292]), 1, yb_type_to_data_len(enc[i*292]), fout)), "fwrite data failed");
 
 	stats_encode(&g);
-	_if((0!=strcmp(outfile,"-"))&&(0!=fclose(fout)), "fclose output failed");
+	_if(fout&&(0!=strcmp(outfile,"-"))&&(0!=fclose(fout)), "fclose output failed");
 	if(enc)
 		free(enc);
 	if(sector)
@@ -155,6 +163,7 @@ char *gen_outpath(char *inpath, int trunc){
 void help(){
 	fprintf(stderr,  "ybe v0.1.1\n\nEncode:\n ybe src.bin\n ybe src.bin dest.ybe\n ybe e src.bin dest.ybe\n\n"
 		"Decode:\n unybe src.ybe\n unybe src.ybe dest.bin\n ybe d src.ybe dest.bin\n\n"
+		"Test:\n ybe t src.bin\n\n"
 		"- can take the place of src/dest to pipe with stdin/stdout\n\n");
 }
 
@@ -174,9 +183,11 @@ int main(int argc, char *argv[]){
 	}
 	if(argc==2)//ybe src || unybe src
 		out=gen_outpath(argv[(argc==4)?2:1], (enc*8)-4);
+	else if((argc==3)&&(strcmp(argv[1], "t")==0))//[un]ybe t src
+		in=argv[2];
 	else if(argc==3)//ybe src dest || unybe src dest
 		out=argv[2];
-	else if(argc==4){//ybe e src dest || ybe d src dest
+	else if(argc==4){//[un]ybe e src dest || [un]ybe d src dest
 		in=argv[2];
 		out=argv[3];
 		if(strcmp(argv[1], "d")==0)
