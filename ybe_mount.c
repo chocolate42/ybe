@@ -65,8 +65,8 @@ static void generate_sector(uint8_t *sector, size_t index, FILE *fin){
 	g.enc=enc+(index*292);
 	g.data=data;
 	g.sector=sector;
-	fseek(fin, dloc[index], SEEK_SET);
-	fread(data, 1, yb_type_to_data_len(enc[index*292]), fin);
+	_if(0!=fseek(fin, dloc[index], SEEK_SET), "fseek failed");
+	_if(yb_type_to_data_len(enc[index*292])!=fread(data, 1, yb_type_to_data_len(enc[index*292]), fin), "fread bin data section failed");
 	decode_sector(&g);
 }
 
@@ -90,8 +90,9 @@ int ybe_mnt_read(const char *path, char *buf, size_t len, off_t offset, struct f
 		if(offset>=(sector_cnt*2048))
 			return -EOF;
 		len = (offset+len)>(sector_cnt*2048)?(sector_cnt*2048)-offset:len;
-		fseek(fin, dloc[0]+offset, SEEK_SET);
-		return fread(buf, 1, len, fin);
+		_if(0!=fseek(fin, dloc[0]+offset, SEEK_SET), "fseek failed");
+		_if(len!=fread(buf, 1, len, fin), "fread iso failed");
+		return len;
 	}
 
 	if(pathmatch(path, bin_path)){
@@ -164,9 +165,9 @@ int main(int argc, char *argv[]){
 	_if(!(fin=fopen(argv[2], "rb")), "Input stream cannot be NULL");
 	ybe_read_header(fin, &sector_cnt, &crunch);
 	enc=ybe_read_encoding(fin, sector_cnt, crunch);
-	dloc=malloc(sector_cnt*sizeof(uint64_t));
+	_if(!(dloc=malloc(sector_cnt*sizeof(uint64_t))), "malloc failed");
 
-	bin_path=malloc(strlen(argv[2]+5));
+	_if(!(bin_path=malloc(strlen(argv[2]+5))), "malloc failed");
 	sprintf(bin_path, "%s.bin", argv[2]);
 	if(str_ends_with(argv[2], ".bin.ybe"))
 		sprintf(bin_path+strlen(bin_path)-11, "bin");
@@ -181,7 +182,7 @@ int main(int argc, char *argv[]){
 			break;
 	}
 	if(i==sector_cnt){
-		iso_path=malloc(strlen(argv[2]+5));
+		_if(!(iso_path=malloc(strlen(argv[2]+5))), "malloc failed");
 		sprintf(iso_path, "%s.iso", argv[2]);
 		if(str_ends_with(argv[2], ".bin.ybe"))
 			sprintf(iso_path+strlen(iso_path)-11, "iso");
