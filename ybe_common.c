@@ -141,9 +141,9 @@ void *ybe_read_encoding(FILE *fin, uint32_t sector_cnt, uint8_t crunch, int *str
 		case 2:
 		case 3:
 		case 4:
-			*stride=1;
-			_if(!(enc=malloc(sector_cnt)), "malloc failed");
-			memset(enc, crunch-1, sector_cnt);
+			*stride=0;
+			_if(!(enc=malloc(1)), "malloc failed");
+			*enc=crunch-1;
 			break;
 
 		case 5:
