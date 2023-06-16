@@ -457,7 +457,10 @@ int main(int argc, char *argv[]){
 	}
 
 	eccedc_init();
-	fprintf(stderr, "%scode '%s' to '%s'\n", enc?"En":"De", in, out);
+	if(out)
+		fprintf(stderr, "%scode '%s' to '%s'\n", enc?"En":"De", in, out);
+	else
+		fprintf(stderr, "%scode '%s'\n", enc?"En":"De", in);
 	func[enc](in, out);
 	if(argc==2)
 		free(out);
