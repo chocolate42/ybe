@@ -145,10 +145,8 @@ void decode_sector(yb *g){
 
 /*Copy section of a sector and update stats if it cannot be predicted*/
 static inline void ecpy(uint8_t *type, uint8_t mask, uint32_t *counter, uint8_t *enc, size_t *enc_loc, uint8_t *cpy, int len, uint32_t *zero_counter){
-#ifdef YB_COUNT_ZERO
 	if(memcmp(zeroes, cpy, len)==0)
 		(*zero_counter)++;
-#endif
 	(*counter)++;
 	(*type)|=mask;
 	memcpy(enc+(*enc_loc), cpy, len);

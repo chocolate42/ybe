@@ -321,8 +321,6 @@ void bin2ybe(char *infile, char* outfile){
 			mode5_size+=(1+sector_cnt);
 
 		//zero encoding
-#ifdef YB_COUNT_ZERO
-		//try zero encoding if it might help
 		zero_saving=(g.cnt_zero_add*3)+(g.cnt_zero_sub*4)+(g.cnt_zero_edc*4)+(g.cnt_zero_eccp*172)+(g.cnt_zero_eccq*104);
 		if(zero_saving){
 			zero_encoding=calloc(sector_cnt, 1);
@@ -348,10 +346,6 @@ void bin2ybe(char *infile, char* outfile){
 		}
 		else
 			++mode5_size;
-#else
-		//ignore zero encoding when zero counting not built
-		++mode5_size;
-#endif
 
 		if(zero_done)
 			mode5_size+=(raw_size-(sector_cnt+zero_saving));
@@ -381,8 +375,6 @@ void bin2ybe(char *infile, char* outfile){
 
 			//zero encoding
 			*tmp=3;
-#ifdef YB_COUNT_ZERO
-			//try zero encoding if it might help
 			if(zero_done){
 				if(zero_rle)
 					_if(fout&&(zero_rle_cnt!=fwrite(zero_rle, 1, zero_rle_cnt, fout)), "fwrite zero rle failed");
@@ -394,10 +386,6 @@ void bin2ybe(char *infile, char* outfile){
 			}
 			else
 				_if(fout&&(1!=fwrite(tmp, 1, 1, fout)), "fwrite no zero header failed");
-#else
-			//ignore zero encoding when zero counting not built
-			_if(fout&&(1!=fwrite(tmp, 1, 1, fout)), "fwrite no zero header failed");
-#endif
 
 			//dump remaining unmodelled data
 			if(zero_done){
