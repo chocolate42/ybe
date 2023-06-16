@@ -30,6 +30,8 @@ int yb_type_to_data_len(uint8_t type);
 int yb_type_to_data_loc(uint8_t type);
 int yb_type_to_enc_len(uint8_t type);
 
+size_t memcpy_cnt(void *dest, const void *src, size_t n);
+
 /* Expose ECM functions called externally */
 void eccedc_init(void);
 uint32_t get32lsb(const uint8_t* src);

@@ -13,6 +13,7 @@ static FILE *log=NULL;
 #endif
 static char *bin_path=NULL;
 static char *iso_path=NULL;
+static int stride;
 static uint8_t *enc;
 static uint64_t *dloc;
 static uint32_t sector_cnt;
@@ -62,11 +63,11 @@ static void generate_sector(uint8_t *sector, size_t index, FILE *fin){
 	uint8_t data[2352];
 	yb g={0};
 	g.sector_address=150+index;
-	g.enc=enc+(index*292);
+	g.enc=enc+(index*stride);
 	g.data=data;
 	g.sector=sector;
 	_if(0!=fseek(fin, dloc[index], SEEK_SET), "fseek failed");
-	_if(yb_type_to_data_len(enc[index*292])!=fread(data, 1, yb_type_to_data_len(enc[index*292]), fin), "fread bin data section failed");
+	_if(yb_type_to_data_len(enc[index*stride])!=fread(data, 1, yb_type_to_data_len(enc[index*stride]), fin), "fread bin data section failed");
 	decode_sector(&g);
 }
 
@@ -164,7 +165,7 @@ int main(int argc, char *argv[]){
 	_if(strcmp(argv[2], "-")==0, "cannot mount from stdin");
 	_if(!(fin=fopen(argv[2], "rb")), "Input stream cannot be NULL");
 	ybe_read_header(fin, &sector_cnt, &crunch);
-	enc=ybe_read_encoding(fin, sector_cnt, crunch);
+	enc=ybe_read_encoding(fin, sector_cnt, crunch, &stride);
 	_if(!(dloc=malloc(sector_cnt*sizeof(uint64_t))), "malloc failed");
 
 	_if(!(bin_path=malloc(strlen(argv[2]+5))), "malloc failed");
@@ -174,11 +175,11 @@ int main(int argc, char *argv[]){
 	dloc_build=ftell(fin);
 	for(i=0;i<sector_cnt;++i){
 		dloc[i]=dloc_build;
-		dloc_build+=yb_type_to_data_len(enc[i*292]);
+		dloc_build+=yb_type_to_data_len(enc[i*stride]);
 	}
 
 	for(i=0;i<sector_cnt;++i){//test if iso can be mounted
-		if(yb_type_to_data_len(enc[i*292])!=2048)
+		if(yb_type_to_data_len(enc[i*stride])!=2048)
 			break;
 	}
 	if(i==sector_cnt){

@@ -58,7 +58,7 @@ static inline void sec_to_add(uint32_t *sec, unsigned char *add){
 	int_to_bcd(&f, add+2);
 }
 
-static inline size_t memcpy_cnt(void *dest, const void *src, size_t n){
+size_t memcpy_cnt(void *dest, const void *src, size_t n){
 	memcpy(dest, src, n);
 	return n;
 }
