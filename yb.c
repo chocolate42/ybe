@@ -1,22 +1,5 @@
 #include "yb.h"
-#ifdef YB_MIN
-static void memcpy(uint8_t *dest, const uint8_t *src, size_t n){
-	size_t i;
-	for(i=0;i<n;++i)
-		dest[i]=src[i];
-}
-static int memcmp(const uint8_t *s1, const uint8_t *s2, size_t n){
-	size_t i;
-	for(i=0;i<n;++i){
-		if(s1[i]!=s2[i])
-			return 1;
-	}
-	return 0;
-}
-#else
 #include <string.h>
-#endif
-
 
 /* ECC generation taken from ECM */
 #include "ecm_code.c"

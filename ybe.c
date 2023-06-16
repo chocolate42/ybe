@@ -1,9 +1,10 @@
 #include "yb.h"
 #include "ybe_common.h"
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 //vint: Standard vint with 7 bits per byte payload
 static size_t bwrite_vint(uint32_t r, uint8_t *b){
@@ -15,25 +16,6 @@ static size_t bwrite_vint(uint32_t r, uint8_t *b){
 	b[ret++]=r&0x7F;
 	return ret;
 }
-
-#ifdef YB_MIN
-int strcmp(const char *s1, const char *s2){
-	size_t n;
-	for(n=0;;++n){
-		if(s1[n]!=s2[n])
-			return 1;
-		if(!s1[n])
-			return 0;
-	}
-}
-size_t strlen(const char *s){
-	size_t n;
-	for(n=0;s[n];++n);
-	return n;
-}
-#else
-#include <string.h>
-#endif
 
 void stats_encode(yb *g){
 	fprintf(stderr, "\nPrediction Stats:\n");
