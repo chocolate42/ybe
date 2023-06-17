@@ -22,3 +22,27 @@ input + precomp 77374819 67524943 47383783
 
 ecm and ybe losslessly remove the ECC, xz cannot compress the incompressible, ybe allows precomp 
 
+## ybe help
+
+ybe v0.2
+
+Encode:
+ ybe src.bin
+ ybe src.bin dest.ybe
+ ybe e src.bin dest.ybe
+
+Decode:
+ unybe src.ybe
+ unybe src.ybe dest.bin
+ ybe d src.ybe dest.bin
+
+Test:
+ ybe t src.bin
+
+- can take the place of src/dest to pipe with stdin/stdout
+
+## ybe_mount
+
+ybe_mount is a FUSE implementation that allows ybe files to be mounted to an empty directory. Once mounted the directory contains a virtual bin file (the original image), and if possible a virtual iso file (the cooked version of the image containing only the data fields of each sector). These virtual files are read only and random access like a normal file, they can be used for example by mounting the images filesystem with your favourite tool or loaded with an emulator, neither of which need to support ybe format directly.
+
+A user could go one step further by storing ybe files on a filesystem with transparent compression/dedupe (like BTRFS/ZFS), meaning they can directly use a compressed file without having to manually decompress.

@@ -87,7 +87,7 @@ size_t unsuck_element(uint8_t type_byte, uint8_t zero_byte, uint8_t mask, size_t
 }
 
 //reverse zerosuck
-void unzerosuck(uint8_t *enc, uint8_t zero_byte, FILE *fin){
+static void unzerosuck(uint8_t *enc, uint8_t zero_byte, FILE *fin){
 	size_t yb_loc=1;
 	if(((*enc)&3)==YB_TYPE_RAW)
 		return;

@@ -17,7 +17,7 @@ static size_t bwrite_vint(uint32_t r, uint8_t *b){
 	return ret;
 }
 
-void stats_encode(yb *g){
+static void stats_encode(yb *g){
 	fprintf(stderr, "\nPrediction Stats:\n");
 	if(g->cnt_conformant)fprintf(stderr, "Fully Predicted Sectors   : %6u / %6u\n", g->cnt_conformant, g->cnt_total);
 	if(g->cnt_dadd)fprintf(stderr, "Unpredictable Address     : %6u / %6u\n", g->cnt_dadd, (g->cnt_mode[YB_TYPE_M1]+g->cnt_mode[YB_TYPE_M2F1]+g->cnt_mode[YB_TYPE_M2F2]));
@@ -41,7 +41,7 @@ void stats_encode(yb *g){
 fprintf(stderr, "\n");
 }
 
-void ybe2bin(char *infile, char* outfile){
+static void ybe2bin(char *infile, char* outfile){
 	FILE *fin=NULL, *fout=NULL;
 	int stride;
 	uint8_t crunch, data[2352], *enc=NULL, sector[2352];
@@ -70,7 +70,7 @@ void ybe2bin(char *infile, char* outfile){
 		free(enc);
 }
 
-void zeromodel_element(uint8_t type_byte, uint8_t *zero_byte, uint8_t mask, size_t len, uint8_t *enc, size_t *yb_loc){
+static void zeromodel_element(uint8_t type_byte, uint8_t *zero_byte, uint8_t mask, size_t len, uint8_t *enc, size_t *yb_loc){
 	uint8_t zeroes[172]={0};
 	if(type_byte&mask){
 		if(0==memcmp(zeroes, enc+*yb_loc, len))
@@ -80,7 +80,7 @@ void zeromodel_element(uint8_t type_byte, uint8_t *zero_byte, uint8_t mask, size
 }
 
 //figure out which unmodelled fields have zeroed data and return as "zero byte"
-uint8_t zeromodel(uint8_t *enc){
+static uint8_t zeromodel(uint8_t *enc){
 	uint8_t ret=0;
 	size_t yb_loc=1;
 	if(((*enc)&3)==YB_TYPE_RAW)
@@ -106,7 +106,7 @@ uint8_t zeromodel(uint8_t *enc){
 	return ret;
 }
 
-void zerosuck_element(uint8_t type_byte, uint8_t zero_byte, uint8_t mask, size_t len, uint8_t *enc, size_t *yb_loc, uint8_t *out, size_t *out_loc){
+static void zerosuck_element(uint8_t type_byte, uint8_t zero_byte, uint8_t mask, size_t len, uint8_t *enc, size_t *yb_loc, uint8_t *out, size_t *out_loc){
 	if(type_byte&mask){
 		if(!(zero_byte&mask))
 			*out_loc+=memcpy_cnt(out+*out_loc, enc+*yb_loc, len);
@@ -115,7 +115,7 @@ void zerosuck_element(uint8_t type_byte, uint8_t zero_byte, uint8_t mask, size_t
 }
 
 //use "zero byte" to suck out zeroed fields from an encoding
-size_t zerosuck(uint8_t *enc, uint8_t zero_byte, uint8_t *out){
+static size_t zerosuck(uint8_t *enc, uint8_t zero_byte, uint8_t *out){
 	size_t yb_loc=1, out_loc=0;
 	if(((*enc)&3)==YB_TYPE_RAW)
 		return out_loc;
@@ -157,7 +157,7 @@ void *realloc_managed(void *ptr, size_t *alloc, size_t loc){
 
 	Used to RLE type bytes and zero encoding
 */
-uint8_t *rle_bytes(uint8_t *in, size_t in_cnt, size_t stride, size_t *out_cnt){
+static uint8_t *rle_bytes(uint8_t *in, size_t in_cnt, size_t stride, size_t *out_cnt){
 	uint8_t *best, *pairenc=NULL, *lenenc=NULL, len[2]={0};
 	size_t curr_run=0, pairenc_cnt=0, lenenc_cnt=0, pairenc_alloc=2048, lenenc_alloc=2048, i;
 	int lenenc_possible=1, first=1;
@@ -227,7 +227,7 @@ uint8_t *rle_bytes(uint8_t *in, size_t in_cnt, size_t stride, size_t *out_cnt){
 	return best;
 }
 
-void bin2ybe(char *infile, char* outfile){
+static void bin2ybe(char *infile, char* outfile){
 	char *ybe="YBE";
 	FILE *fin, *fout=NULL;
 	size_t sector_alloc=0, sector_cnt=0, enc_size_tot=0, i, fread_res;
@@ -406,7 +406,7 @@ void bin2ybe(char *infile, char* outfile){
 		free(sector);
 }
 
-char *gen_outpath(char *inpath, int trunc){
+static char *gen_outpath(char *inpath, int trunc){
 	char *outpath;
 	_if(!(outpath=malloc(strlen(inpath)+5)), "malloc failed");
 	sprintf(outpath, "%s.ybe", inpath);
@@ -414,7 +414,7 @@ char *gen_outpath(char *inpath, int trunc){
 	return outpath;
 }
 
-void help(){
+static void help(){
 	fprintf(stderr,  "ybe v0.2\n\nEncode:\n ybe src.bin\n ybe src.bin dest.ybe\n ybe e src.bin dest.ybe\n\n"
 		"Decode:\n unybe src.ybe\n unybe src.ybe dest.bin\n ybe d src.ybe dest.bin\n\n"
 		"Test:\n ybe t src.bin\n\n"
