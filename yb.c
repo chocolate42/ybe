@@ -46,6 +46,12 @@ size_t memcpy_cnt(void *dest, const void *src, size_t n){
 	return n;
 }
 
+static inline _Bool copy_if(_Bool test, uint8_t *dest, uint8_t *src, size_t n, size_t *yb_loc){
+	if(test)
+		(*yb_loc)+=memcpy_cnt(dest, src, n);
+	return test;
+}
+
 void decode_sector(yb *g){
 	size_t yb_loc=1;
 	int head=g->enc[0];
@@ -55,33 +61,19 @@ void decode_sector(yb *g){
 	}
 
 	memcpy(g->sector, sync, 12);
-	if(head&YB_ADD)
-		yb_loc+=memcpy_cnt(g->sector+12, g->enc+yb_loc, 3);
-	else
+	if(!copy_if(head&YB_ADD, g->sector+12, g->enc+yb_loc, 3, &yb_loc))
 		sec_to_add(&g->sector_address, g->sector+12);
 
 	if((head&3)==YB_TYPE_M1){
 		g->sector[15]=1;
 		g->data_cnt=memcpy_cnt(g->sector+16, g->data, 2048);
-
-		if(head&YB_EDC)
-			yb_loc+=memcpy_cnt(g->sector+2064, g->enc+yb_loc, 4);
-		else
+		if(!copy_if(head&YB_EDC, g->sector+2064, g->enc+yb_loc, 4, &yb_loc))
 			put32lsb(g->sector+2064, edc_compute(0, g->sector, 0x810));
-
-		if(head&YB_SUB)
-			yb_loc+=memcpy_cnt(g->sector+2068, g->enc+yb_loc, 8);
-		else
+		if(!copy_if(head&YB_SUB, g->sector+2068, g->enc+yb_loc, 8, &yb_loc))
 			memcpy(g->sector+2068, subheader+((head&3)*8), 8);
-
-		if(head&YB_ECCP)
-			yb_loc+=memcpy_cnt(g->sector+2076, g->enc+yb_loc, 172);
-		else
+		if(!copy_if(head&YB_ECCP, g->sector+2076, g->enc+yb_loc, 172, &yb_loc))
 			ecc_writesectorp(g->sector+12, g->sector+16, g->sector+2076);
-
-		if(head&YB_ECCQ)
-			yb_loc+=memcpy_cnt(g->sector+2248, g->enc+yb_loc, 104);
-		else
+		if(!copy_if(head&YB_ECCQ, g->sector+2248, g->enc+yb_loc, 104, &yb_loc))
 			ecc_writesectorq(g->sector+12, g->sector+16, g->sector+2076);
 		goto DEC_BYE;
 	}
@@ -96,28 +88,16 @@ void decode_sector(yb *g){
 
 	if((head&3)==YB_TYPE_M2F1){
 		g->data_cnt=memcpy_cnt(g->sector+24, g->data, 2048);
-
-		if(head&YB_EDC)
-			yb_loc+=memcpy_cnt(g->sector+2072, g->enc+yb_loc, 4);
-		else
+		if(!copy_if(head&YB_EDC, g->sector+2072, g->enc+yb_loc, 4, &yb_loc))
 			put32lsb(g->sector+2072, edc_compute(0, g->sector+16, 2056));
-
-		if(head&YB_ECCP)
-			yb_loc+=memcpy_cnt(g->sector+2076, g->enc+yb_loc, 172);
-		else
+		if(!copy_if(head&YB_ECCP, g->sector+2076, g->enc+yb_loc, 172, &yb_loc))
 			ecc_writesectorp(zeroes, g->sector+16, g->sector+2076);
-
-		if(head&YB_ECCQ)
-			yb_loc+=memcpy_cnt(g->sector+2248, g->enc+yb_loc, 104);
-		else
+		if(!copy_if(head&YB_ECCQ, g->sector+2248, g->enc+yb_loc, 104, &yb_loc))
 			ecc_writesectorq(zeroes, g->sector+16, g->sector+2076);
 	}
 	else{//YB_TYPE_M2F2
 		g->data_cnt=memcpy_cnt(g->sector+24, g->data, 2324);
-
-		if(head&YB_EDC)
-			yb_loc+=memcpy_cnt(g->sector+2348, g->enc+yb_loc, 4);
-		else
+		if(!copy_if(head&YB_EDC, g->sector+2348, g->enc+yb_loc, 4, &yb_loc))
 			put32lsb(g->sector+2348, edc_compute(0, g->sector+16, 2332));
 	}
 
