@@ -73,6 +73,7 @@ static uint8_t *unrle_bytes(FILE *fin, int stride, uint32_t sector_cnt){
 		default:
 			_("Unknown rle header, invalid input or outdated program");
 	}
+	return NULL;
 }
 
 size_t unsuck_element(uint8_t type_byte, uint8_t zero_byte, uint8_t mask, size_t len, FILE *fin, uint8_t *out){

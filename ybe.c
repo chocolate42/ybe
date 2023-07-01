@@ -8,7 +8,7 @@
 
 //vint: Standard vint with 7 bits per byte payload
 static size_t bwrite_vint(uint32_t r, uint8_t *b){
-	size_t i, ret=0, loc=0;
+	size_t i, ret=0;
 	for(i=28;i>=7;i-=7){
 		if(r>=(1ull<<i))
 			b[ret++]=((r>>i)&0x7F)|0x80;

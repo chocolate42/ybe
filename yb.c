@@ -124,7 +124,7 @@ size_t encode_sector(yb *g){
 	if(memcmp(sync, sec, 12)==0){/* sync present, could be M1/M2F1/M2F2 */
 		if(sec[15]==1){/*M1*/
 			++g->cnt_mode[YB_TYPE_M1];
-			type+=YB_TYPE_M1;
+			type|=YB_TYPE_M1;
 
 			sec_to_add(&g->sector_address, g->add_scratch);
 			if(memcmp(sec+12, g->add_scratch, 3)!=0)
@@ -148,7 +148,7 @@ size_t encode_sector(yb *g){
 		else if(sec[15]==2 && memcmp(sec+16, sec+20, 4)==0){
 			if(sec[18]&32){/*M2F2*/
 				++g->cnt_mode[YB_TYPE_M2F2];
-				type+=YB_TYPE_M2F2;
+				type|=YB_TYPE_M2F2;
 
 				sec_to_add(&g->sector_address, g->add_scratch);
 				if(memcmp(sec+12, g->add_scratch, 3)!=0)
@@ -165,7 +165,7 @@ size_t encode_sector(yb *g){
 			}
 			else{/*M2F1*/
 				++g->cnt_mode[YB_TYPE_M2F1];
-				type+=YB_TYPE_M2F1;
+				type|=YB_TYPE_M2F1;
 
 				sec_to_add(&g->sector_address, g->add_scratch);
 				if(memcmp(sec+12, g->add_scratch, 3)!=0)
@@ -189,14 +189,14 @@ size_t encode_sector(yb *g){
 		}
 		else{/* Not M1/M2F1/M2F2, treat as raw */
 			++g->cnt_mode[YB_TYPE_RAW];
-			type+=YB_TYPE_RAW;
+			type|=YB_TYPE_RAW;
 			g->data=sec;
 			g->data_cnt=2352;
 		}
 	}
 	else{/* no sync, treat as RAW */
 		++g->cnt_mode[YB_TYPE_RAW];
-		type+=YB_TYPE_RAW;
+		type|=YB_TYPE_RAW;
 		g->data=sec;
 		g->data_cnt=2352;
 	}
