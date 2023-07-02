@@ -1,4 +1,5 @@
 #include "yb.h"
+#include "ybcrunch.h"
 #include "ybe_common.h"
 #include <errno.h>
 #define FUSE_USE_VERSION 32
@@ -75,11 +76,6 @@ static inline size_t smol(size_t a, size_t b){
 	return a<b?a:b;
 }
 
-static inline size_t memcpy_cnt(void *dest, const void *src, size_t n){
-	memcpy(dest, src, n);
-	return n;
-}
-
 int ybe_mnt_read(const char *path, char *buf, size_t len, off_t offset, struct fuse_file_info *fi){
 #ifdef DEB
 	if(log){fprintf(log, "read\n");fflush(log);}
@@ -153,7 +149,6 @@ struct fuse_operations ybe_mnt_ops = {
 int main(int argc, char *argv[]){
 	char *fuseops[6]={"ybe_mount", NULL, "-o", "ro", "-s", NULL};
 	size_t i;
-	uint8_t crunch;
 	uint64_t dloc_build;
 	if(argc!=3)
 		return printf("Usage: ybe_mount mount_dir ybe_file.ybe\n");
@@ -164,8 +159,8 @@ int main(int argc, char *argv[]){
 
 	_if(strcmp(argv[2], "-")==0, "cannot mount from stdin");
 	_if(!(fin=fopen(argv[2], "rb")), "Input stream cannot be NULL");
-	ybe_read_header(fin, &sector_cnt, &crunch);
-	enc=ybe_read_encoding(fin, sector_cnt, crunch, &stride);
+	ybe_read_header(fin, &sector_cnt);
+	enc=yb_uncrunch(fin, sector_cnt, &stride);
 	_if(!(dloc=malloc(sector_cnt*sizeof(uint64_t))), "malloc failed");
 
 	_if(!(bin_path=malloc(strlen(argv[2]+5))), "malloc failed");
