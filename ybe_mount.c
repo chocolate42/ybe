@@ -161,6 +161,20 @@ int main(int argc, char *argv[]){
 	_if(!(fin=fopen(argv[2], "rb")), "Input stream cannot be NULL");
 	ybe_read_header(fin, &sector_cnt);
 	enc=yb_uncrunch(fin, sector_cnt, &stride);
+	if(stride==292){//try shrinking stride to reduce long-term ram use
+		stride=yb_type_to_enc_len(*enc);
+		for(i=1;i<sector_cnt;++i){
+			if(yb_type_to_enc_len(enc[i*292])>stride)
+				stride=yb_type_to_enc_len(enc[i*292]);
+		}
+		if(stride<292){
+			for(i=1;i<sector_cnt;++i)
+				memmove(enc+(i*stride), enc+(i*292), yb_type_to_enc_len(enc[i*292]));
+			enc=realloc(enc, stride*sector_cnt);
+		}
+		else
+			stride=292;
+	}
 	_if(!(dloc=malloc(sector_cnt*sizeof(uint64_t))), "malloc failed");
 
 	_if(!(bin_path=malloc(strlen(argv[2]+5))), "malloc failed");

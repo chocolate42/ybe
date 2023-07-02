@@ -398,7 +398,6 @@ uint8_t *yb_uncrunch(FILE *fin, uint32_t sector_cnt, int *stride){
 				if(1!=yb_type_to_enc_len(enc[i*292]))
 					_if((yb_type_to_enc_len(enc[i*292])-1)!=fread(enc+(i*292)+1, 1, yb_type_to_enc_len(enc[i*292])-1, fin), "fread sector encoding failed");
 			}
-			//optional post-read stride shrink TODO
 			break;
 
 		//perfectly modelled with a single sector type
